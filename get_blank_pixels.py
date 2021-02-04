@@ -6,7 +6,6 @@ import pickle
 if __name__ == "__main__":
 
     os.chdir('/home/block-am/Documents/SLIC Test Data/')
-
     data = sio.loadmat('paper_grid')
     cube = np.array(data['cube']['badPix'][0][0])
 
