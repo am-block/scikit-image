@@ -26,12 +26,17 @@ def impute_blanks(data):
     return data
 
 
-def normalize(data, factor):
+def normalize(data):
     # fancy normalized data
     smushed_data = data.reshape(data.shape[0]*data.shape[1],
                                 data.shape[2])
 
-    scaled = smushed_data * factor / np.percentile(smushed_data, 100)
+    min_scale = smushed_data.min()
+    max_scale = np.percentile(smushed_data, 99)  # 98.5
+    # /99 max_scale = smushed_data.max()
+    scaled = (smushed_data - min_scale) / (max_scale - min_scale)
+
+    # scaled = smushed_data / np.percentile(smushed_data, 99)
     orig_shape_data = scaled.reshape(data.shape[0], data.shape[1],
                                      data.shape[2])
     return orig_shape_data
@@ -42,16 +47,16 @@ def remove_zero(cube):
     # fill in blank pixels
     filled_in_data = impute_blanks(cube)
     # remove blank wns
-    nonzero_data = filled_in_data[:, :, 20:280]  # y: 10:120
+    nonzero_data = filled_in_data[10:120, :, 20:280]  # y: 10:120
 
     return nonzero_data
 
 
-def preprocess(data, factor):
+def preprocess(data):
     # boxcar smoothing
     smoothed_data = ndi.uniform_filter(data, size=3, mode='constant')
     # normalize the data
-    normal_data = normalize(smoothed_data, factor)
+    normal_data = normalize(smoothed_data)
     return normal_data
 
 
