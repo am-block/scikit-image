@@ -1,6 +1,7 @@
 import numpy as np
 import seaborn as sns
-import os, re, sys, pickle
+import os
+import re
 from matplotlib import pyplot as plt  # only for evaluation?
 from timeit import default_timer as timer  # only for evaluation
 from processing import get_cube, get_truth_name, preprocess, impute_blanks
@@ -14,6 +15,7 @@ def rx_detector(img):
     time2 = timer()
     print("rx: ", time2 - time1)  # 0.07 +/- 0.01
     return rxvals
+
 
 def pooled_img(img):
     pooled = []
@@ -36,8 +38,8 @@ def create_plots(image_data, anomalies):
     sns.set(font_scale=4)
     ax1.tick_params(labelsize='small')
     nbands = image_data.shape[-1]
-    P = chi2.ppf(0.99, nbands)
-    # P = chi2.ppf(0.999, nbands)
+    # P = chi2.ppf(0.99, nbands)
+    P = chi2.ppf(0.999, nbands)
     # lower, upper = get_axis(image_data)
     sns.heatmap(image, ax=ax1)
     ax2.tick_params(labelsize='small')
@@ -46,18 +48,17 @@ def create_plots(image_data, anomalies):
 
 
 def fill_zeros(cube):
-    normal = np.nanmean(cube, axis=(0, 1))
+    norm = np.nanmean(cube, axis=(0, 1))
     missing = np.argwhere(np.isnan(cube))
     for pixel in missing:
-        cube[pixel[0]][pixel[1]][pixel[2]] = normal[pixel[2]]
+        cube[pixel[0]][pixel[1]][pixel[2]] = norm[pixel[2]]
     return cube
 
 
 def remove_blanks(cube):
     # fill in blank pixels
     filled_in_data = impute_blanks(cube)
-    nonzero_data = filled_in_data[10:120, 10:125, 20:280]  # y: 10:120
-    # nonzero_data = filled_in_data[19:115, 11:125, 20:280]  # y: 10:120
+    nonzero_data = filled_in_data[19:115, 11:125, 20:280]  # y: 10:120, 10:
     no_zeroes = fill_zeros(nonzero_data)
     return no_zeroes
 
@@ -101,19 +102,11 @@ if __name__ == "__main__":
             setD = re.search('D', sample)
             if setD:
                 current = re.search('\d+(_\d+)?', sample).group()
-                cube, wn = get_cube(sample)
-                nonzero_cube = remove_blanks(cube)
-                split_data = [pooled_img(nonzero_cube)]
-                # split_data = [split(nonzero_cube)]
-                # dataA, dataB, dataC = split(nonzero_cube)
-                # split_data = [dataA, dataB, dataC]
-                # dataA, dataB, dataC, dataD, dataE = split(nonzero_cube)
-                # split_data = [dataA, dataB, dataC, dataD, dataE]
-                for i, data in enumerate(split_data):
-                    img_data = preprocess(data)
+                if current in names:
+                    cube, wn = get_cube(sample)
+                    nonzero_cube = remove_blanks(cube)
+                    img_data = preprocess(nonzero_cube)
                     rx_anomalies = rx_detector(img_data)
-                    if len(split_data) < 2: i = -1
-                    if current in names:
-                        create_plots(nonzero_cube, rx_anomalies)
-                        outdir = 'output/rx_pool-imputed99-more'
-                        save_plt(outdir, sample, i)
+                    create_plots(nonzero_cube, rx_anomalies)
+                    outdir = 'output/rx-imputed999'
+                    save_plt(outdir, sample)

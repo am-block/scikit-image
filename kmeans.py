@@ -10,6 +10,9 @@ from timeit import default_timer as timer  # only for evaluation
 import pandas as pd
 from pysptools import skl  # ended support in 2018
 import warnings
+from sklearn.cluster import KMeans
+from rxanomaly import rx_detector, remove_blanks, fill_zeros, impute_blanks, pooled_img
+
 
 def save_plt(outdir, sample, i=-1):
     if i >= 0:
@@ -67,16 +70,40 @@ def get_spectra(segment_labels, cube, wn):
     return multispectra
 
 
-def kmeans(img):
+def kmeans_spy(img):
+    time1 = timer()
+    (m, n) = spy.kmeans(img, 3, 10)  # spectral /spy (data, clusters, iters)
+    time2 = timer()
+    print('kmeans time: ', time2 - time1)
+    return m
+
+
+def kmeans_pysp(img):
+    time1 = timer()
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=FutureWarning)
-        time1 = timer()
         km = skl.KMeans()
-        m = km.predict(img, n_clusters=10, n_jobs=-1)  # n_jobs = #CPUs
-        # (m, n) = spy.kmeans(img, 5, 10)  # spectral /spy (data, clusters, iters)
+        m = km.predict(img, n_clusters=3, n_jobs=-1)  # n_jobs = #CPUs
         time2 = timer()
         print('kmeans time: ', time2 - time1)
         return m
+
+
+def kmeans_skl(cube):
+    nonzero_cube = remove_blanks(cube)
+    img_data = preprocess(nonzero_cube)
+    pooled = pooled_img(img_data)
+    rxvals = rx_detector(pooled)
+    rx_reshaped = rxvals.reshape(rxvals.shape[0]*rxvals.shape[1]).reshape(-1, 1)
+    #    smushed_data = data.reshape(data.shape[0]*data.shape[1],
+    #                             data.shape[2])
+    time1 = timer()
+    km = KMeans(n_clusters=5, max_iter=10, n_jobs=-1)
+    m = km.fit_predict(rx_reshaped)
+    m = m.reshape(rxvals.shape[0], rxvals.shape[1])
+    time2 = timer()
+    print('kmeans time: ', time2 - time1)
+    return m
 
 
 if __name__ == "__main__":
@@ -94,10 +121,12 @@ if __name__ == "__main__":
                 current = re.search('\d+(_\d+)?', sample).group()
                 cube, wn = get_cube(sample)
                 nonzero_cube = remove_zero(cube)
-                img_data = preprocess(nonzero_cube)
-                segments = kmeans(img_data)
+                # img_data = preprocess(nonzero_cube)
+                # segments = kmeans_spy(img_data)
+                # segments = kmeans_pysp(img_data)
+                segments = kmeans_skl(cube)
                 spectra = get_spectra(segments, cube, wn)
                 if current in names:
                     create_plots(nonzero_cube, segments, spectra)
-                    outdir = 'output/kmeans/pysptools/clusters10_multiCPUs'
+                    outdir = 'output/kmeans/sklearn-rx/c5-10x-pooled'
                     save_plt(outdir, sample)

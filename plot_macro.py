@@ -1,7 +1,9 @@
 import scipy.io as sio
 import numpy as np
 import seaborn as sns
-import os, re, sys, pickle
+import os
+import re
+import sys
 import pandas as pd
 import pysptools.distance as dis  # this is for evluation only
 from matplotlib import pyplot as plt  # only for evaluation?
@@ -10,23 +12,6 @@ from collections import defaultdict
 from timeit import default_timer as timer  # only for evaluation
 from processing import get_axis, get_cube, get_truth_name, impute_blanks, preprocess, remove_zero
 import warnings
-
-
-def get_segments(data):
-    # time1 = timer()
-    labels = segmentation.slic(data, n_segments=40, compactness=0.5,
-                               convert2lab=False, slic_zero=False,
-                               start_label=1, max_iter=15)
-    # time2 = timer()
-    # segmentation.slic(data, n_segments=10, compactness=1, convert2lab=False,
-    #    slic_zero=False, start_label=1, max_iter=30)
-    # time3 = timer()
-    # segmentation.slic(data, n_segments=10, compactness=1,
-    #     convert2lab=False, slic_zero=False, start_label=1, max_iter=50)
-    # time4 = timer()
-
-    # print('SLIC Algs: ', time2 - time1, time3 - time2, time4 - time3)
-    return labels
 
 
 def get_truth_spectra(sample):
@@ -88,13 +73,12 @@ def spec_distance(spectra, skip):
     sorted_sid = sorted(range(1, len(combined_sid) + 1),
                         key=lambda k: combined_sid[k-1], reverse=True)
     # topquart = int(len(sorted_sid)/4)
-    topquart_sid = sorted_sid[:2]  # topquart]
+    topquart_sid = sorted_sid[:1]  # topquart]
     return topquart_sid
 
 
 def get_spectra(segment_labels, cube, wn, name, truth):
     # get avg spectra for each segment
-
     cube[cube == 0.0] = np.nan
     segment_spectra = defaultdict(list)
     num_labels = np.max(segment_labels) + 1  # python offset
@@ -104,16 +88,19 @@ def get_spectra(segment_labels, cube, wn, name, truth):
     spectra = defaultdict(list)
     skip = []
     multiplier = len(cube[0][0])
+    #don't care about clusters with a lot of nans AKA edges
     for cluster in range(1, num_labels):
         size = len(segment_spectra[cluster])
         nans = np.count_nonzero(np.isnan(segment_spectra[cluster]))
         if nans/(size*multiplier) > 0.25:
             skip.append(cluster)
+        # say spectra is the mean of the pixels spectras
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)
             spectra[cluster] = np.nanmean(segment_spectra[cluster], axis=0)
     tsid = 0.0
     sid = spec_distance(spectra, skip)
+    # save out truth spectra and the closest by sid
     if truth:
         true_spec, tsid = truth_sid(spectra, name, skip)
         truth_dict = {'truth': true_spec}
@@ -164,6 +151,26 @@ def create_plots(image_data, segment_data, spectra_data, scores, truth):
     plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
 
+def get_segments(data, factor, nseg, miter):
+    # time1 = timer()
+    labels = segmentation.slic(data, n_segments=nseg, compactness=factor,
+                               convert2lab=False, slic_zero=False,
+                               start_label=1, max_iter=miter)
+    # time2 = timer()
+    # print('SLIC Algs: ', time2 - time1, time3 - time2, time4 - time3)
+    return labels
+
+
+def save_plt(outdir, sample, factor):
+    try:
+        plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
+    except OSError:
+        os.mkdir(outdir)
+        plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
+    plt.close()
+
+
+
 if __name__ == "__main__":
     os.chdir('/home/block-am/Documents/SLIC Test Data/')
     try:
@@ -171,36 +178,45 @@ if __name__ == "__main__":
     except IndexError:
         factor = 0.5
 
-    # factors = [0.01, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35,
-    #           0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
-    # nfactor = [1.0]
-    nfactor = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     samples = [line.rstrip() for line in open('samples.txt', 'r')]
     truth_names = get_truth_name()
     names = [name[8:] for name in truth_names]
-
-    for sample in samples:
-        if (sample == 'paper_grid'):
-            current = 0.0
-        else:
-            setD = re.search('D', sample)
-            sam01 = re.search('_01', sample)
-            if setD and sam01:
-                # loop over different factors
-                for nfact in nfactor:
-                    current = re.search('\d+(_\d+)?', sample).group()
-                    cube, wn = get_cube(sample)
-                    nonzero_cube = remove_zero(cube)
-                    img_data = preprocess(nonzero_cube, nfact)
-                    segment_data = get_segments(img_data)
-                    if current in names:
-                        spectra_data, sid = get_spectra(segment_data, nonzero_cube,
-                                                        wn, current, True)
-                        create_plots(img_data, segment_data, spectra_data, sid, True)
-                        plt.savefig('output/normalize_scan/'+sample+"c"+str(factor)
-                                    + "_"+str(nfact)+".png")
-                        plt.close()
-# else:
+    factors = [0.5, 0.6, 0.65, 0.7, 0.75, 0.8]
+    # factors = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+    #            1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+    # factors = [1.6, 1.7, 1.8, 1.9]
+    nsegs = [10, 20, 40]
+    miters = [10, 30, 50]
+    for nseg in nsegs:
+        for miter in miters:
+            for factor in factors:
+                for sample in samples:
+                    if (sample == 'paper_grid'):
+                        current = 0.0
+                    else:
+                        setD = re.search('D', sample)
+                        if setD:
+                            current = re.search('\d+(_\d+)?', sample).group()
+                            cube, wn = get_cube(sample)
+                            nonzero_cube = remove_zero(cube)
+                            img_data = preprocess(nonzero_cube)
+                            segment_data = get_segments(img_data, factor, nseg,
+                                                        miter)
+                            if current in names:
+                                spectra_data, sid = get_spectra(segment_data,
+                                                                nonzero_cube, wn,
+                                                                current, True)
+                                create_plots(img_data, segment_data, spectra_data,
+                                             sid, True)
+                                outdir = 'output/normalize98p5_'+str(nseg)+'x'+str(miter)
+                                save_plt(outdir, sample, factor)
+                                # try:
+                                #     plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
+                                # except OSError:
+                                #     os.mkdir(outdir)
+                                #     plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
+                                # plt.close()
+        # else:
 #     spectra_data, sid = get_spectra(segment_data, nonzero_cube,
 #                                     wn, sample, False)
 #     create_plots(img_data, segment_data, spectra_data, sid, False)
