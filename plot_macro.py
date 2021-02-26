@@ -7,7 +7,7 @@ import sys
 import pandas as pd
 import pysptools.distance as dis  # this is for evluation only
 from matplotlib import pyplot as plt  # only for evaluation?
-from skimage import segmentation
+from skimage.segmentation import slic
 from collections import defaultdict
 from timeit import default_timer as timer  # only for evaluation
 from processing import get_axis, get_cube, get_truth_name, impute_blanks, preprocess, remove_zero
@@ -153,7 +153,7 @@ def create_plots(image_data, segment_data, spectra_data, scores, truth):
 
 def get_segments(data, factor, nseg, miter):
     # time1 = timer()
-    labels = segmentation.slic(data, n_segments=nseg, compactness=factor,
+    labels = slic(data, n_segments=nseg, compactness=factor,
                                convert2lab=False, slic_zero=False,
                                start_label=1, max_iter=miter)
     # time2 = timer()
