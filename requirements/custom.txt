@@ -1,0 +1,16 @@
+pandas
+numpy
+scipy
+scikit-learn
+matplotlib
+seaborn
+wheel
+spectral
+jupyter
+tabulate
+plotnine
+lightgbm == 2.1.2
+xgboost == 0.72.1
+pysptools
+cython
+mat73
