@@ -43,10 +43,7 @@ def truth_sid(spectra, name, skip):
 
     sorted_spectra = sorted(range(1, len(spec_sid) + 1),
                             key=lambda k: spec_sid[k-1])
-    most_similar = sorted_spectra[:1]
-    # sid_score = min(spec_sid)
-    # sid_index = spec_sid.index(min(spec_sid)) + 1
-    # print("closest sid_score: ", sid_score, " for ", sid_index)
+    most_similar = sorted_spectra[:2]
 
     return truth_spect, most_similar
 
@@ -73,7 +70,7 @@ def spec_distance(spectra, skip):
     sorted_sid = sorted(range(1, len(combined_sid) + 1),
                         key=lambda k: combined_sid[k-1], reverse=True)
     # topquart = int(len(sorted_sid)/4)
-    topquart_sid = sorted_sid[:1]  # topquart]
+    topquart_sid = sorted_sid[:2]  # topquart]
     return topquart_sid
 
 
@@ -92,7 +89,7 @@ def get_spectra(segment_labels, cube, wn, name, truth):
     for cluster in range(1, num_labels):
         size = len(segment_spectra[cluster])
         nans = np.count_nonzero(np.isnan(segment_spectra[cluster]))
-        if nans/(size*multiplier) > 0.25:
+        if nans/(size*multiplier) > 0.2:  # 0.25
             skip.append(cluster)
         # say spectra is the mean of the pixels spectras
         with warnings.catch_warnings():

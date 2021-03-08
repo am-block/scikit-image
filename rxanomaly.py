@@ -10,10 +10,17 @@ from scipy.stats import chi2
 
 
 def rx_detector(img):
-    time1 = timer()
+#     time1 = timer()
     rxvals = spy.rx(img)
-    time2 = timer()
-    print("rx: ", time2 - time1)  # 0.07 +/- 0.01
+#     time2 = timer()
+#     print("rx: ", time2 - time1)  # 0.07 +/- 0.01
+    nbands = img.shape[-1]
+    # P = chi2.ppf(0.999, nbands)
+    # P2 = chi2.ppf(0.99, nbands)
+    # P3 = chi2.ppf(0.9, nbands)
+    # print("ps: ", P, P2, P3)
+    # print("min/max: ", rxvals.min(), rxvals.max())
+    # print("percentiles: ", np.percentile(rxvals, 99), np.percentile(rxvals, 90), np.percentile(rxvals, 50))
     return rxvals
 
 
@@ -31,7 +38,7 @@ def pooled_img(img):
 
 def create_plots(image_data, anomalies):
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(80, 40))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(90, 60))
 
     # median value for 'best image'
     image = np.median(image_data, axis=2)
@@ -45,6 +52,7 @@ def create_plots(image_data, anomalies):
     ax2.tick_params(labelsize='small')
     sns.heatmap((anomalies > P), ax=ax2)
     # sns.heatmap(anomalies, ax=ax2)
+    sns.histplot(data=anomalies, ax=ax3)
 
 
 def fill_zeros(cube):
@@ -108,5 +116,5 @@ if __name__ == "__main__":
                     img_data = preprocess(nonzero_cube)
                     rx_anomalies = rx_detector(img_data)
                     create_plots(nonzero_cube, rx_anomalies)
-                    outdir = 'output/rx-imputed999'
+                    outdir = 'output/rx-hist'
                     save_plt(outdir, sample)
