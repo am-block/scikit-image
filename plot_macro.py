@@ -43,7 +43,7 @@ def truth_sid(spectra, name, skip):
 
     sorted_spectra = sorted(range(1, len(spec_sid) + 1),
                             key=lambda k: spec_sid[k-1])
-    most_similar = sorted_spectra[:2]
+    most_similar = sorted_spectra[:1]
 
     return truth_spect, most_similar
 
@@ -70,7 +70,7 @@ def spec_distance(spectra, skip):
     sorted_sid = sorted(range(1, len(combined_sid) + 1),
                         key=lambda k: combined_sid[k-1], reverse=True)
     # topquart = int(len(sorted_sid)/4)
-    topquart_sid = sorted_sid[:2]  # topquart]
+    topquart_sid = sorted_sid[:1]  # topquart]
     return topquart_sid
 
 
@@ -148,13 +148,13 @@ def create_plots(image_data, segment_data, spectra_data, scores, truth):
     plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
 
-def get_segments(data, factor, nseg, miter):
-    # time1 = timer()
+def get_segments(data, factor=0.7, nseg=40, miter=30):
+    time1 = timer()
     labels = slic(data, n_segments=nseg, compactness=factor,
                                convert2lab=False, slic_zero=False,
-                               start_label=1, max_iter=miter)
-    # time2 = timer()
-    # print('SLIC Algs: ', time2 - time1, time3 - time2, time4 - time3)
+                               start_label=1, max_iter=miter, enforce_connectivity=False)
+    time2 = timer()
+    print('SLIC Algs: ', time2 - time1)
     return labels
 
 
@@ -170,23 +170,20 @@ def save_plt(outdir, sample, factor):
 
 if __name__ == "__main__":
     os.chdir('/home/block-am/Documents/SLIC Test Data/')
-    try:
-        factor = float(sys.argv[1])
-    except IndexError:
-        factor = 0.5
 
     samples = [line.rstrip() for line in open('samples.txt', 'r')]
     truth_names = get_truth_name()
     names = [name[8:] for name in truth_names]
-    factors = [0.5, 0.6, 0.65, 0.7, 0.75, 0.8]
-    # factors = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-    #            1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-    # factors = [1.6, 1.7, 1.8, 1.9]
-    nsegs = [10, 20, 40]
-    miters = [10, 30, 50]
+    
+    factors = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+    # factors = [0.5, 0.75, 1.0, 1.25, 1.5, 2, 5, 10]
+    nsegs = [5, 10, 20]
+    # nsegs = [30, 35, 40]
+    miters = [10]
     for nseg in nsegs:
         for miter in miters:
             for factor in factors:
+                print('tryng ', nseg, ' segments with compactness ', factor, ' and ', miter, ' iterations')
                 for sample in samples:
                     if (sample == 'paper_grid'):
                         current = 0.0
@@ -205,19 +202,5 @@ if __name__ == "__main__":
                                                                 current, True)
                                 create_plots(img_data, segment_data, spectra_data,
                                              sid, True)
-                                outdir = 'output/normalize98p5_'+str(nseg)+'x'+str(miter)
+                                outdir = 'output/segment_cube/slic_nocon_'+str(nseg)+'x'+str(miter)
                                 save_plt(outdir, sample, factor)
-                                # try:
-                                #     plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
-                                # except OSError:
-                                #     os.mkdir(outdir)
-                                #     plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
-                                # plt.close()
-        # else:
-#     spectra_data, sid = get_spectra(segment_data, nonzero_cube,
-#                                     wn, sample, False)
-#     create_plots(img_data, segment_data, spectra_data, sid, False)
-#     plt.savefig('output/num_cluster_scan/'+sample+"c"+str(factor)+"x15.png")
-#     plt.close()
-#     continue
-# spectra_data, sid = get_spectra(segment_data, nonzero_cube, wn)

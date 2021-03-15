@@ -7,6 +7,7 @@ from timeit import default_timer as timer  # only for evaluation
 from processing import get_cube, get_truth_name, preprocess, impute_blanks
 import spectral as spy
 from scipy.stats import chi2
+from sklearn.preprocessing import RobustScaler
 
 
 def rx_detector(img):
@@ -14,13 +15,6 @@ def rx_detector(img):
     rxvals = spy.rx(img)
 #     time2 = timer()
 #     print("rx: ", time2 - time1)  # 0.07 +/- 0.01
-    nbands = img.shape[-1]
-    # P = chi2.ppf(0.999, nbands)
-    # P2 = chi2.ppf(0.99, nbands)
-    # P3 = chi2.ppf(0.9, nbands)
-    # print("ps: ", P, P2, P3)
-    # print("min/max: ", rxvals.min(), rxvals.max())
-    # print("percentiles: ", np.percentile(rxvals, 99), np.percentile(rxvals, 90), np.percentile(rxvals, 50))
     return rxvals
 
 
@@ -79,11 +73,11 @@ def split(data):
     # dataD = data[y_length*3:y_length*4]
     # dataE = data[y_length*4:]
     # return dataA, dataB, dataC, dataD, dataE
-    # dataA = data[:32]
-    # dataB = data[32:64]
-    # dataC = data[64:]
-    # return dataA, dataB, dataC
-    return data
+    dataA = data[:32]
+    dataB = data[32:64]
+    dataC = data[64:]
+    return dataA, dataB, dataC
+    # return data
 
 
 def save_plt(outdir, sample, i=-1):

@@ -17,6 +17,16 @@ import spectral as spy
 from sklearn.preprocessing import RobustScaler
 from plot_macro import truth_sid, get_truth_spectra, spec_distance
 
+
+def save_plt(outdir, sample, nseg=0):
+    try:
+        plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
+    except OSError:
+        os.mkdir(outdir)
+        plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
+    plt.close()
+
+
 def get_spectra(segments, cube, wn, name):
     # get avg spectra for each segment
     cube[cube == 0.0] = np.nan
@@ -86,22 +96,22 @@ def create_plots(image_data, segments, spectra, similar):
 
 
 def scale(data):
-    # min_max_scaler = MinMaxScaler()
-    robust_scaler = RobustScaler(quantile_range=(65, 100))
+    robust_scaler = RobustScaler(quantile_range=(50, 100))
     scaled_data = robust_scaler.fit_transform(data)
-    # scaled_data = min_max_scaler.fit_transform(data)
     return scaled_data
 
 
-def get_segments(rxvals):
+def get_segments(rxvals, nseg=40, c=3.0, miter=100):
     time1 = timer()
     # scale to [0, 1]
     scaled_vals = scale(rxvals)
+    segments = slic(scaled_vals, n_segments=nseg, compactness=c, convert2lab=False,
+                    slic_zero=False, start_label=1, max_iter=miter, enforce_connectivity=False)
     # segments = quickshift(scaled_vals, ratio=.75, max_dist=7, 
     #                       return_tree=False, sigma=0.5, convert2lab=False, random_seed=15)
     # segments = slic(scaled_vals, n_segments=20, compactness=0.75, convert2lab=False,
-    segments = slic(scaled_vals, n_segments=10, compactness=0.25, convert2lab=False,
-                    slic_zero=False, start_label=1, max_iter=50)
+    # segments = slic(scaled_vals, n_segments=10, compactness=0.3, convert2lab=False,
+    #                 slic_zero=False, start_label=1, max_iter=100, enforce_connectivity=False)
     # segments = felzenszwalb(scaled_vals, scale=200, sigma=0.5, min_size=100)
     # segments = felzenszwalb(scaled_vals, scale=100, sigma=0.5, min_size=50)
     # segments = watershed(scaled_vals, markers=30, connectivity=1, offset=None, mask=None,
@@ -117,6 +127,10 @@ if __name__ == "__main__":
     samples = [line.rstrip() for line in open('samples.txt', 'r')]
     truth_names = get_truth_name()
     names = [name[8:] for name in truth_names]
+    nsegs = [10, 20, 30, 35, 40]
+    factors = [0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
+    miters = [50, 100]
+
     for sample in samples:
         if (sample == 'paper_grid'):
             continue
@@ -125,12 +139,17 @@ if __name__ == "__main__":
             if setD:
                 current = re.search('\d+(_\d+)?', sample).group()
                 if current in names:
-                    cube, wn = get_cube(sample)
-                    nonzero_cube = remove_blanks(cube)
-                    img_data = preprocess(nonzero_cube)
-                    rx_anomalies = rx_detector(img_data)
-                    segments = get_segments(rx_anomalies)
-                    spectra, similar = get_spectra(segments, cube, wn, current)
-                    create_plots(nonzero_cube, segments, spectra, similar)
-                    outdir = 'output/segment_rx/slic-10-50x'
-                    save_plt(outdir, sample)
+
+                    for nseg in nsegs:
+                        for factor in factors:
+                            for miter in miters:
+
+                                cube, wn = get_cube(sample)
+                                nonzero_cube = remove_blanks(cube)
+                                img_data = preprocess(nonzero_cube)
+                                rx_anomalies = rx_detector(img_data)
+                                segments = get_segments(rx_anomalies, nseg, factor, miter)
+                                spectra, similar = get_spectra(segments, cube, wn, current)
+                                create_plots(nonzero_cube, segments, spectra, similar)
+                                outdir = 'output/segment_rx/slic-nocon/'+sample+"_"+str(nseg)+'x'+str(miter)
+                                save_plt(outdir, sample, factor)
