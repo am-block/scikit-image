@@ -1,20 +1,30 @@
 import scipy.io as sio
 import numpy as np
 import pickle
+import mat73
 from scipy import ndimage as ndi
 
 
 def get_cube(file):
-    data = sio.loadmat(file)
-    cube = np.array(data['cube']['betterRefl'][0][0])
-    # cube = cube[:32][:64]  # model streaming format
-    wn = np.array(data['cube']['wn'][0][0][20:280])
+    try: 
+        data = sio.loadmat(file)
+        cube = np.array(data['cube']['betterRefl'][0][0])
+        # cube = cube[:32][:64]  # model streaming format
+        wn = np.array(data['cube']['wn'][0][0][20:280])
+    except:
+        data = mat73.loadmat(file)
+        cube = np.array(data['cube']['betterRefl'])
+        wn = np.array(data['cube']['wn'])
     return cube, wn
 
 
 def impute_blanks(data):
-    with open('./badPix.pkl', 'rb') as fp:
+    with open('../badPix.pkl', 'rb') as fp:
+    # with open('./badPix.pkl', 'rb') as fp:
         badPix = pickle.load(fp)
+
+    print(data.shape)
+    print(max(badPix[0]), max(badPix[1]))
 
     for pixel in badPix:
         data[pixel[0]][pixel[1]] = (
@@ -42,12 +52,18 @@ def normalize(data):
     return orig_shape_data
 
 
+def no_nans(cube):
+    cube[np.isnan(cube)] = 0
+    return cube
+
+
 def remove_zero(cube):
     cube[np.isnan(cube)] = 0
     # fill in blank pixels
     filled_in_data = impute_blanks(cube)
     # remove blank wns
-    nonzero_data = filled_in_data[10:120, :, 20:280]  # y: 10:120
+    nonzero_data = filled_in_data[:, :, :]
+    # nonzero_data = filled_in_data[10:120, :, 20:280]  # y: 10:120
 
     return nonzero_data
 
