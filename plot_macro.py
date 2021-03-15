@@ -7,7 +7,7 @@ import sys
 import pandas as pd
 import pysptools.distance as dis  # this is for evluation only
 from matplotlib import pyplot as plt  # only for evaluation?
-from skimage import segmentation
+from skimage.segmentation import slic
 from collections import defaultdict
 from timeit import default_timer as timer  # only for evaluation
 from processing import get_axis, get_cube, get_truth_name, impute_blanks, preprocess, remove_zero
@@ -150,7 +150,7 @@ def create_plots(image_data, segment_data, spectra_data, scores, truth):
 
 def get_segments(data, factor=0.7, nseg=40, miter=30):
     time1 = timer()
-    labels = segmentation.slic(data, n_segments=nseg, compactness=factor,
+    labels = slic(data, n_segments=nseg, compactness=factor,
                                convert2lab=False, slic_zero=False,
                                start_label=1, max_iter=miter, enforce_connectivity=False)
     time2 = timer()
@@ -204,17 +204,3 @@ if __name__ == "__main__":
                                              sid, True)
                                 outdir = 'output/segment_cube/slic_nocon_'+str(nseg)+'x'+str(miter)
                                 save_plt(outdir, sample, factor)
-                                # try:
-                                #     plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
-                                # except OSError:
-                                #     os.mkdir(outdir)
-                                #     plt.savefig(outdir+'/'+sample+"c"+str(factor)+".png")
-                                # plt.close()
-        # else:
-#     spectra_data, sid = get_spectra(segment_data, nonzero_cube,
-#                                     wn, sample, False)
-#     create_plots(img_data, segment_data, spectra_data, sid, False)
-#     plt.savefig('output/num_cluster_scan/'+sample+"c"+str(factor)+"x15.png")
-#     plt.close()
-#     continue
-# spectra_data, sid = get_spectra(segment_data, nonzero_cube, wn)
